@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Find The Imposter | Study Sprint</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body class="dark-theme">
 
@@ -208,8 +209,7 @@
                                 <th>MVPs</th>
                             </tr>
                         </thead>
-                        <tbody id="leaderboard-rows-target">
-                            </tbody>
+                        <tbody id="leaderboard-rows-target"></tbody>
                     </table>
                 </div>
             </div>
@@ -224,5 +224,7 @@
         </div>
     </div>
 
+    <script src="firebase-config.js"></script>
+    <script src="game.js"></script>
 </body>
 </html>
