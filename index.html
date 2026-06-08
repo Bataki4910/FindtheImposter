@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Find The Imposter | Study Sprint</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+</head>
+<body class="dark-theme">
+
+    <div id="splash-screen" class="screen active">
+        <div class="splash-content">
+            <div class="brand-logo">STUDY SPRINT</div>
+            <h1 class="game-title">FIND THE<br><span class="glitch-text">IMPOSTER</span></h1>
+            <div class="loader-container">
+                <div class="loader-bar"></div>
+            </div>
+            <p class="loading-status">Connecting to Quantum Servers...</p>
+        </div>
+    </div>
+
+    <button id="global-audio-toggle" class="audio-btn raw-icon-btn" onclick="window.gameEngine.toggleAudio()">
+        <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18.01,19.86 21,16.28 21,12C21,7.72 18.01,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.77 16.5,12M11,21L7,17H3V7H7L11,3V21Z"/></svg>
+    </button>
+
+    <div id="app-container">
+
+        <div id="screen-auth" class="view-screen hidden">
+            <div class="panel glass-panel centered-panel">
+                <h2 class="section-title text-center">SECURE ACCESS</h2>
+                <div class="form-group">
+                    <label>PLAYER CODENAME</label>
+                    <input type="text" id="input-player-name" placeholder="Enter username..." maxlength="14" autocomplete="off">
+                </div>
+                <div class="avatar-selector-container">
+                    <label class="block-label">SELECT AVATAR</label>
+                    <div class="avatar-grid" id="auth-avatar-grid"></div>
+                </div>
+                <div class="action-stack">
+                    <button id="btn-create-lobby" class="btn btn-primary glow-green">CREATE NEW ROOM</button>
+                    <div class="divider"><span>OR</span></div>
+                    <div class="join-input-group">
+                        <input type="text" id="input-room-code" placeholder="ROOM CODE" maxlength="6">
+                        <button id="btn-join-lobby" class="btn btn-secondary">JOIN ROOM</button>
+                    </div>
+                </div>
+                <div class="footer-branding">STUDY SPRINT PRESENTATION</div>
+            </div>
+        </div>
+
+        <div id="screen-lobby" class="view-screen hidden">
+            <div class="header-bar">
+                <div class="room-info">
+                    <span class="label">ROOM CODE</span>
+                    <h2 id="display-room-code" class="code-text">------</h2>
+                </div>
+                <button id="btn-leave-lobby" class="btn btn-danger btn-sm">LEAVE</button>
+            </div>
+
+            <div class="lobby-grid">
+                <div class="panel glass-panel player-list-panel">
+                    <h3>ROSTER (<span id="player-count">0</span>/10)</h3>
+                    <div id="lobby-player-list" class="scrollable-list"></div>
+                </div>
+
+                <div id="panel-host-settings" class="panel glass-panel settings-panel">
+                    <h3>MISSION PARAMETERS</h3>
+                    <div class="form-group">
+                        <label>SECRET WORD CATEGORY / WORD</label>
+                        <input type="text" id="host-secret-word" placeholder="e.g., Pizza, Spaceship" value="Pizza">
+                    </div>
+                    <div class="form-group">
+                        <label>IMPOSTER COUNT</label>
+                        <select id="host-imposter-count">
+                            <option value="1" selected>1 Imposter</option>
+                            <option value="2">2 Imposters</option>
+                            <option value="3">3 Imposters</option>
+                        </select>
+                    </div>
+                    <div class="host-controls-wrapper" id="host-action-controls">
+                        <p class="non-host-notice text-center gold-text">Waiting for host to configure parameters...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="screen-gameboard" class="view-screen hidden">
+            <div class="game-header-bar">
+                <div class="round-indicator">
+                    <span class="sub">PHASE</span>
+                    <span id="display-current-round" class="main neon-text">ROUND 1: CLUES</span>
+                </div>
+                <div class="global-timer-badge" id="game-timer-container">
+                    <svg class="timer-ring" width="36" height="36">
+                        <circle class="timer-ring-circle" stroke="var(--neon-green)" stroke-width="3" fill="transparent" r="16" cx="18" cy="18"/>
+                    </svg>
+                    <span id="game-timer-text">60</span>
+                </div>
+                <div class="utility-buttons">
+                    <button class="btn btn-icon-outline" onclick="window.gameEngine.ui.toggleRulesModal(true)">?</button>
+                    <button class="btn btn-icon-outline" onclick="window.gameEngine.ui.toggleLeaderboardModal(true)">🏆</button>
+                </div>
+            </div>
+
+            <div class="card role-card-wrapper wrapper-glow" id="identity-card-container">
+                <div class="role-card-inner" id="role-card-flip-target" onclick="window.gameEngine.revealRoleCardTemporarily()">
+                    <div class="role-card-front">
+                        <div class="tap-hint">TAP TO REVEAL PRIVATE DATA</div>
+                    </div>
+                    <div class="role-card-back" id="role-card-payload">
+                        <div class="role-title" id="role-reveal-title">UNKNOWN</div>
+                        <div class="role-word-label">YOUR SECRET DATA:</div>
+                        <div class="role-word" id="role-reveal-word">------</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="gameplay-main-layout">
+                <div id="game-interaction-dashboard" class="panel glass-panel interaction-panel">
+                    <div id="subview-clue-submission" class="subview">
+                        <h4>SUBMIT ANONYMOUS CLUE</h4>
+                        <div class="clue-input-row">
+                            <input type="text" id="input-clue-text" placeholder="Write a distinct, single-sentence clue..." maxlength="60">
+                            <button id="btn-submit-clue" class="btn btn-primary">SUBMIT</button>
+                        </div>
+                    </div>
+
+                    <div id="subview-voting-matrix" class="subview hidden">
+                        <h4 class="text-center text-danger pulse-element">ELIMINATION PHASE: CAST YOUR VOTE</h4>
+                        <div class="voting-grid" id="voting-players-grid"></div>
+                    </div>
+
+                    <div id="subview-idle-waiting" class="subview hidden">
+                        <div class="loading-spinner-small"></div>
+                        <p class="text-center grey-text" id="idle-waiting-msg">Waiting for other operatives to complete activities...</p>
+                    </div>
+                </div>
+
+                <div class="logs-and-feed-grid">
+                    <div class="panel glass-panel feed-panel">
+                        <h3>ANONYMOUS INTEL CLUES</h3>
+                        <div id="clue-feed-container" class="scrollable-list clean-feed"></div>
+                    </div>
+
+                    <div class="panel glass-panel status-panel">
+                        <h3>OPERATIVE STATUS</h3>
+                        <div id="gameboard-players-list" class="grid-layout-players"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="reaction-floating-bar">
+                <button onclick="window.gameEngine.sendReaction('🔥')">🔥</button>
+                <button onclick="window.gameEngine.sendReaction('👀')">👀</button>
+                <button onclick="window.gameEngine.sendReaction('😂')">😂</button>
+                <button onclick="window.gameEngine.sendReaction('🤔')">🤔</button>
+                <button onclick="window.gameEngine.sendReaction('🤫')">🤫</button>
+                <button onclick="window.gameEngine.sendReaction('🚨')">🚨</button>
+            </div>
+
+            <div id="reaction-particle-gate"></div>
+
+            <div id="game-host-override-deck" class="host-deck hidden">
+                <span class="deck-tag">HOST COMMAND DECK</span>
+                <button class="btn btn-danger btn-xs" onclick="window.gameEngine.hostForcePhaseChange()">FORCE VOTING</button>
+                <button class="btn btn-warning btn-xs" onclick="window.gameEngine.hostTerminateGame()">TERMINATE</button>
+                <button class="btn btn-secondary btn-xs" onclick="window.gameEngine.hostToggleRevealAllRoles()">REVEAL ROLES</button>
+                <div id="host-live-role-matrix" class="live-matrix-popover"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-rules" class="modal-overlay hidden">
+        <div class="modal-box glass-panel">
+            <div class="modal-header">
+                <h2>MISSION BRIEFING</h2>
+                <button class="close-btn" onclick="window.gameEngine.ui.toggleRulesModal(false)">&times;</button>
+            </div>
+            <div class="modal-body">
+                <ul>
+                    <li><strong>Innocents:</strong> You receive a uniform Secret Word. Your mission is to identify the anomalies using anonymous text clues.</li>
+                    <li><strong>Imposters:</strong> You do not know the word. Your screen displays <span class="text-danger">"YOU ARE THE IMPOSTER"</span>. You must blend in by copying clues.</li>
+                    <li><strong>The Setup:</strong> 2 Rounds of descriptive inputs are executed before an active voting protocol occurs.</li>
+                    <li><strong>Eliminations:</strong> Highest vote count results in execution and identity exposure.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-leaderboard" class="modal-overlay hidden">
+        <div class="modal-box glass-panel wide-modal">
+            <div class="modal-header">
+                <h2>GLOBAL DIVISION RANKINGS</h2>
+                <button class="close-btn" onclick="window.gameEngine.ui.toggleLeaderboardModal(false)">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="leaderboard-table">
+                        <thead>
+                            <tr>
+                                <th>OPERATIVE</th>
+                                <th>DIVISION RANK</th>
+                                <th>WIN %</th>
+                                <th>IMPOSTER WINS</th>
+                                <th>SURVIVAL %</th>
+                                <th>MVPs</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboard-rows-target">
+                            </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-cinematic" class="modal-overlay full-screen-modal hidden">
+        <div id="cinematic-canvas" class="cinematic-container animate-pulse">
+            <h1 id="cinematic-headline" class="heavy-title">ALERT</h1>
+            <p id="cinematic-subtext" class="sub-narrative">SYSTEM STATUS UPDATE</p>
+            <div id="cinematic-extra-visuals"></div>
+        </div>
+    </div>
+
+</body>
+</html>
